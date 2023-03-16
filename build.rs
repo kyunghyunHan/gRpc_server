@@ -4,9 +4,9 @@ fn main() {
             ".",
             "#[derive(Hash, Eq, serde::Serialize, serde::Deserialize)]",
         )
-        .out_dir("src/pb")
-        .compile(&["./abi.proto"], &["./"])
+        .out_dir("src/proto")
+        .compile(&["./login.proto"], &["./"])
         .unwrap();
-    println!("cargo:rerun-if-changed=./abi.proto");
+    println!("cargo:rerun-if-changed=./login.proto");
     println!("cargo:rerun-if-changed=./build.rs");
 }

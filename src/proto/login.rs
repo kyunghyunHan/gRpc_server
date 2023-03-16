@@ -1,31 +1,18 @@
 #[derive(Hash, Eq, serde::Serialize, serde::Deserialize, Clone, PartialEq, ::prost::Message)]
 pub struct LoginRequest {
     #[prost(string, tag = "1")]
-    pub username: ::prost::alloc::string::String,
+    pub user_id: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
-    pub password: ::prost::alloc::string::String,
+    pub user_pw: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub user_name: ::prost::alloc::string::String,
 }
 /// 서버에서 생성된 토큰
 #[derive(Hash, Eq, serde::Serialize, serde::Deserialize, Clone, PartialEq, ::prost::Message)]
-pub struct Token {
+pub struct LoginResponse {
     ///토큰 데이터
-    #[prost(string, tag = "1")]
-    pub data: ::prost::alloc::string::String,
-}
-///
-///새로운 메시지를 보내기 위한 데이터 구조
-///- 고유한 방 이름
-///- "tyr"와 같은 사용자 이름일 수 있고 "engineering"이라는 그룹 이름일 수 있습니다.
-///또는 쉼표로 구분된 사용자 이름 목록 "tyr,joe"
-///- 채팅 내용
-#[derive(Hash, Eq, serde::Serialize, serde::Deserialize, Clone, PartialEq, ::prost::Message)]
-pub struct NewChatMessage {
-    #[prost(string, tag = "1")]
-    pub room: ::prost::alloc::string::String,
-    #[prost(string, tag = "2")]
-    pub username: ::prost::alloc::string::String,
-    #[prost(string, tag = "3")]
-    pub content: ::prost::alloc::string::String,
+    #[prost(bool, tag = "1")]
+    pub successful: bool,
 }
 /// 빈 전송 메시지 응답
 #[derive(Hash, Eq, serde::Serialize, serde::Deserialize, Clone, PartialEq, ::prost::Message)]
@@ -114,7 +101,7 @@ pub mod chat_client {
         pub async fn login(
             &mut self,
             request: impl tonic::IntoRequest<super::LoginRequest>,
-        ) -> Result<tonic::Response<super::Token>, tonic::Status> {
+        ) -> Result<tonic::Response<super::LoginResponse>, tonic::Status> {
             self.inner.ready().await.map_err(|e| {
                 tonic::Status::new(
                     tonic::Code::Unknown,
@@ -122,21 +109,7 @@ pub mod chat_client {
                 )
             })?;
             let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static("/abi.Chat/Login");
-            self.inner.unary(request.into_request(), path, codec).await
-        }
-        pub async fn send_message(
-            &mut self,
-            request: impl tonic::IntoRequest<super::NewChatMessage>,
-        ) -> Result<tonic::Response<super::SendMessageResponse>, tonic::Status> {
-            self.inner.ready().await.map_err(|e| {
-                tonic::Status::new(
-                    tonic::Code::Unknown,
-                    format!("Service was not ready: {}", e.into()),
-                )
-            })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static("/abi.Chat/SendMessage");
+            let path = http::uri::PathAndQuery::from_static("/login.Chat/Login");
             self.inner.unary(request.into_request(), path, codec).await
         }
         pub async fn get_messages(
@@ -151,7 +124,7 @@ pub mod chat_client {
                 )
             })?;
             let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static("/abi.Chat/GetMessages");
+            let path = http::uri::PathAndQuery::from_static("/login.Chat/GetMessages");
             self.inner
                 .server_streaming(request.into_request(), path, codec)
                 .await
@@ -168,11 +141,7 @@ pub mod chat_server {
         async fn login(
             &self,
             request: tonic::Request<super::LoginRequest>,
-        ) -> Result<tonic::Response<super::Token>, tonic::Status>;
-        async fn send_message(
-            &self,
-            request: tonic::Request<super::NewChatMessage>,
-        ) -> Result<tonic::Response<super::SendMessageResponse>, tonic::Status>;
+        ) -> Result<tonic::Response<super::LoginResponse>, tonic::Status>;
         #[doc = "Server streaming response type for the GetMessages method."]
         type GetMessagesStream: futures_core::Stream<Item = Result<super::ChatMessage, tonic::Status>>
             + Send
@@ -225,11 +194,11 @@ pub mod chat_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/abi.Chat/Login" => {
+                "/login.Chat/Login" => {
                     #[allow(non_camel_case_types)]
                     struct LoginSvc<T: Chat>(pub Arc<T>);
                     impl<T: Chat> tonic::server::UnaryService<super::LoginRequest> for LoginSvc<T> {
-                        type Response = super::Token;
+                        type Response = super::LoginResponse;
                         type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
@@ -256,38 +225,7 @@ pub mod chat_server {
                     };
                     Box::pin(fut)
                 }
-                "/abi.Chat/SendMessage" => {
-                    #[allow(non_camel_case_types)]
-                    struct SendMessageSvc<T: Chat>(pub Arc<T>);
-                    impl<T: Chat> tonic::server::UnaryService<super::NewChatMessage> for SendMessageSvc<T> {
-                        type Response = super::SendMessageResponse;
-                        type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::NewChatMessage>,
-                        ) -> Self::Future {
-                            let inner = self.0.clone();
-                            let fut = async move { (*inner).send_message(request).await };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = SendMessageSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec).apply_compression_config(
-                            accept_compression_encodings,
-                            send_compression_encodings,
-                        );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
-                }
-                "/abi.Chat/GetMessages" => {
+                "/login.Chat/GetMessages" => {
                     #[allow(non_camel_case_types)]
                     struct GetMessagesSvc<T: Chat>(pub Arc<T>);
                     impl<T: Chat> tonic::server::ServerStreamingService<super::GetMessagesRequest>
@@ -354,6 +292,6 @@ pub mod chat_server {
         }
     }
     impl<T: Chat> tonic::transport::NamedService for ChatServer<T> {
-        const NAME: &'static str = "abi.Chat";
+        const NAME: &'static str = "login.Chat";
     }
 }
