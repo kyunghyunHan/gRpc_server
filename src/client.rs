@@ -1,23 +1,23 @@
-use login::login_client::LoginClient;
-use login::LoginRequest;
+use payments::bitcoin_client::BitcoinClient;
+use payments::BtcPaymentRequest;
 
-pub mod login {
-    tonic::include_proto!("login");
+pub mod payments {
+    tonic::include_proto!("payments");
 }
-dd
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = LoginClient::connect("http://[::1]:50051").await?;
+    let mut client = BitcoinClient::connect("http://[::1]:50051").await?;
 
     let request = tonic::Request::new(
-        LoginRequest {
-            user_id: "123456".to_owned(),
-            user_pw: "654321".to_owned(),
-            user_name: "654321".to_owned(),
+        BtcPaymentRequest {
+            from_addr: "123456".to_owned(),
+            to_addr: "654321".to_owned(),
+            amount: 22
         }
     );
 
-    let response = client.logins(request).await?;
+    let response = client.send_payment(request).await?;
 
     println!("RESPONSE={:?}", response);
 
