@@ -1,26 +1,26 @@
 use tonic::{transport::Server, Request, Response, Status};
 
-use payments::bitcoin_server::{Bitcoin, BitcoinServer};
-use payments::{BtcPaymentResponse, BtcPaymentRequest};
+use login::login_server::{Login, LoginServer};
+use login::{LoginRequest, LoginResponse};
 
-pub mod payments {
-    tonic::include_proto!("payments");
+pub mod login {
+    tonic::include_proto!("login");
 }
 
 #[derive(Debug, Default)]
-pub struct BitcoinService {}
+pub struct LoginSevice {}
 
 #[tonic::async_trait]
-impl Bitcoin for BitcoinService {
-    async fn send_payment(
+impl Login for LoginSevice {
+    async fn send_login(
         &self,
-        request: Request<BtcPaymentRequest>,
-    ) -> Result<Response<BtcPaymentResponse>, Status> {
+        request: Request<LoginRequest>,
+    ) -> Result<Response<LoginResponse>, Status> {
         println!("Got a request: {:?}", request);
 
         let req = request.into_inner();
 
-        let reply = BtcPaymentResponse {
+        let reply = LoginResponse {
             successful: true,
             message: format!("Sent {}BTC to {}.", req.amount, req.to_addr).into(),
         };
@@ -32,10 +32,10 @@ impl Bitcoin for BitcoinService {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::1]:50051".parse()?;
-    let btc_service = BitcoinService::default();
+    let btc_service = LoginSevice::default();
 
     Server::builder()
-        .add_service(BitcoinServer::new(btc_service))
+        .add_service(LoginServer::new(btc_service))
         .serve(addr)
         .await?;
 
