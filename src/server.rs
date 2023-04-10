@@ -33,7 +33,7 @@ impl Login for LoginSevice {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::1]:50051".parse()?;
     let btc_service = LoginSevice::default();
-
+    println!("{}",addr);
     Server::builder()
         .add_service(LoginServer::new(btc_service))
         .serve(addr)
